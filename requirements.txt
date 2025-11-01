@@ -1,0 +1,10 @@
+livekit-agents
+livekit-plugins-bey
+httpx
+livekit-plugins-openai
+python-dotenv
+fastapi
+uvicorn
+livekit
+livekit-plugins-noise-cancellation
+livekit-agents[silero]

@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveKit Avatar Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .status-bar {
+            background: #f7f9fc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .status-dot.connecting {
+            background: #ff9800;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .control-panel {
+            background: #f7f9fc;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .control-panel label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .control-panel input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            text-align: center;
+            transition: border-color 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .control-panel input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .media-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+
+        .media-box {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            min-height: 400px;
+        }
+
+        .media-box video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .media-label {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .no-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+            opacity: 0.7;
+            font-size: 1.2em;
+        }
+
+        .no-video div:first-child {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        #remoteVideoContainer {
+            width: 100%;
+            height: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .media-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 LiveKit Avatar</h1>
+        </div>
+
+        <div class="content">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span class="status-dot" id="connectionStatus"></span>
+                <span id="connectionText">Disconnected</span>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <label for="identity">Enter Your Name</label>
+                <input type="text" id="identity" value="user" placeholder="Your identity" />
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" id="connectBtn" onclick="connectToRoom()">
+                        Connect
+                    </button>
+                    <button class="btn btn-danger" id="disconnectBtn" onclick="disconnect()" disabled>
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+
+            <!-- Media Container -->
+            <div class="media-container" id="mediaContainer" style="display: none;">
+                <div class="media-box">
+                    <span class="media-label">Avatar Video</span>
+                    <div class="no-video" id="noRemoteVideo">
+                        <div>🎥</div>
+                        <div>Waiting for avatar...</div>
+                    </div>
+                    <div id="remoteVideoContainer"></div>
+                </div>
+                <div class="media-box">
+                    <span class="media-label">Your Video</span>
+                    <video id="localVideo" autoplay playsinline muted></video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LiveKit SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/dist/livekit-client.umd.min.js"></script>
+    
+    <script>
+        // Configuration - Update these values
+        const TOKEN_SERVER_URL = 'http://localhost:8000/get_token';
+        const ROOM_NAME = 'test-room';
+
+        // Global variables
+        let room;
+        let LK = window.LivekitClient;
+        let remoteVideoElements = new Map();
+
+        // Update connection status
+        function updateStatus(status, text) {
+            const statusDot = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            
+            statusDot.className = 'status-dot ' + status;
+            statusText.textContent = text;
+        }
+
+        // Connect to LiveKit room
+        async function connectToRoom() {
+            const identity = document.getElementById('identity').value.trim();
+            
+            if (!identity) {
+                alert('Please enter your identity');
+                return;
+            }
+
+            updateStatus('connecting', 'Connecting...');
+            document.getElementById('connectBtn').disabled = true;
+
+            try {
+                // Fetch token
+                const url = `${TOKEN_SERVER_URL}?room_name=${encodeURIComponent(ROOM_NAME)}&identity=${encodeURIComponent(identity)}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to get token: ${response.status}`);
+                }
+                
+                const tokenData = await response.json();
+
+                // Create room instance
+                room = new LK.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                    videoCaptureDefaults: {
+                        resolution: LK.VideoPresets.h720.resolution,
+                    }
+                });
+
+                // Set up event listeners
+                setupRoomEventListeners();
+
+                // Connect to room
+                await room.connect(tokenData.url, tokenData.token);
+                
+                updateStatus('connected', 'Connected');
+                
+                // Update button states
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('identity').disabled = true;
+                
+                // Show media container
+                document.getElementById('mediaContainer').style.display = 'grid';
+                
+                // Check for existing video tracks
+                room.remoteParticipants.forEach(participant => {
+                    participant.trackPublications.forEach(publication => {
+                        if (publication.kind === 'video' && publication.isSubscribed && publication.track) {
+                            handleVideoTrack(publication.track, participant);
+                        }
+                    });
+                });
+                
+                // Enable local media
+                await enableMedia();
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                alert(`Connection failed: ${error.message}`);
+                updateStatus('disconnected', 'Disconnected');
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        // Handle video track attachment
+        function handleVideoTrack(track, participant) {
+            try {
+                // Remove any existing video elements for this participant
+                const existingElement = remoteVideoElements.get(participant.identity);
+                if (existingElement) {
+                    existingElement.remove();
+                    remoteVideoElements.delete(participant.identity);
+                }
+                
+                // Create and attach video element
+                const videoElement = track.attach();
+                videoElement.style.width = '100%';
+                videoElement.style.height = '100%';
+                videoElement.style.objectFit = 'contain';
+                
+                // Store reference
+                remoteVideoElements.set(participant.identity, videoElement);
+                
+                // Add to container
+                const container = document.getElementById('remoteVideoContainer');
+                container.innerHTML = '';
+                container.appendChild(videoElement);
+                
+                // Hide placeholder
+                document.getElementById('noRemoteVideo').style.display = 'none';
+                
+            } catch (error) {
+                console.error('Failed to attach video:', error);
+            }
+        }
+
+        // Set up room event listeners
+        function setupRoomEventListeners() {
+            if (!room) return;
+
+            room.on('trackSubscribed', (track, publication, participant) => {
+                if (track.kind === 'video') {
+                    handleVideoTrack(track, participant);
+                } else if (track.kind === 'audio') {
+                    const audioElement = track.attach();
+                    audioElement.style.display = 'none';
+                    document.body.appendChild(audioElement);
+                }
+            });
+
+            room.on('trackUnsubscribed', (track, publication, participant) => {
+                if (track.kind === 'video') {
+                    const videoElement = remoteVideoElements.get(participant.identity);
+                    if (videoElement) {
+                        videoElement.remove();
+                        remoteVideoElements.delete(participant.identity);
+                    }
+                    document.getElementById('noRemoteVideo').style.display = 'block';
+                }
+                track.detach();
+            });
+
+            room.on('participantDisconnected', (participant) => {
+                const videoElement = remoteVideoElements.get(participant.identity);
+                if (videoElement) {
+                    videoElement.remove();
+                    remoteVideoElements.delete(participant.identity);
+                }
+            });
+
+            room.on('disconnected', () => {
+                handleDisconnect();
+            });
+
+            room.on('reconnecting', () => {
+                updateStatus('connecting', 'Reconnecting...');
+            });
+
+            room.on('reconnected', () => {
+                updateStatus('connected', 'Connected');
+            });
+        }
+
+        // Enable local media
+        async function enableMedia() {
+            try {
+                const tracks = await LK.createLocalTracks({
+                    audio: true,
+                    video: true,
+                });
+
+                for (const track of tracks) {
+                    if (track.kind === 'video') {
+                        const element = track.attach();
+                        document.getElementById('localVideo').srcObject = element.srcObject;
+                    }
+                    await room.localParticipant.publishTrack(track);
+                }
+                
+            } catch (error) {
+                console.error('Failed to enable media:', error);
+            }
+        }
+
+        // Disconnect from room
+        function disconnect() {
+            if (room) {
+                room.disconnect();
+            }
+        }
+
+        // Handle disconnection cleanup
+        function handleDisconnect() {
+            // Clean up all remote video elements
+            remoteVideoElements.forEach(element => element.remove());
+            remoteVideoElements.clear();
+            
+            room = null;
+            
+            // Clear video elements
+            document.getElementById('remoteVideoContainer').innerHTML = '';
+            document.getElementById('localVideo').srcObject = null;
+            document.getElementById('noRemoteVideo').style.display = 'block';
+            
+            // Hide media container
+            document.getElementById('mediaContainer').style.display = 'none';
+            
+            // Reset button states
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('identity').disabled = false;
+            
+            updateStatus('disconnected', 'Disconnected');
+        }
+    </script>
+</body>
+</html>
